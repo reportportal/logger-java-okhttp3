@@ -1,2 +1,3 @@
 # Report Portal logger for OkHttp3 client
-Report Portal logger for OkHttp
+
+The latest version: $LATEST_VERSION.
