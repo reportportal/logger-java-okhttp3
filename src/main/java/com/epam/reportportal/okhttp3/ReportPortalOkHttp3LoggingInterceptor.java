@@ -25,9 +25,7 @@ import com.epam.reportportal.formatting.http.entities.Cookie;
 import com.epam.reportportal.formatting.http.entities.Header;
 import com.epam.reportportal.listeners.LogLevel;
 import com.epam.reportportal.okhttp3.support.HttpEntityFactory;
-import okhttp3.Interceptor;
-import okhttp3.Request;
-import okhttp3.Response;
+import okhttp3.*;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -125,6 +123,20 @@ public class ReportPortalOkHttp3LoggingInterceptor extends AbstractHttpFormatter
 		this(defaultLogLevel, DefaultHttpHeaderConverter.INSTANCE, DefaultHttpHeaderConverter.INSTANCE);
 	}
 
+	@SuppressWarnings("resource")
+	private static Response[] duplicateResponse(Response from) throws IOException {
+		Response.Builder responseBuilder1 = from.newBuilder();
+		Response.Builder responseBuilder2 = from.newBuilder();
+		ResponseBody body = from.body();
+		if (body != null) {
+			MediaType type = body.contentType();
+			byte[] bytes = body.bytes();
+			responseBuilder1.body(ResponseBody.create(bytes, type));
+			responseBuilder2.body(ResponseBody.create(bytes, type));
+		}
+		return new Response[] { responseBuilder1.build(), responseBuilder2.build() };
+	}
+
 	@Nonnull
 	@Override
 	public Response intercept(@Nonnull Chain chain) throws IOException {
@@ -141,13 +153,14 @@ public class ReportPortalOkHttp3LoggingInterceptor extends AbstractHttpFormatter
 				bodyTypeMap
 		));
 		Response response = chain.proceed(chain.request());
-		emitLog(HttpEntityFactory.createHttpResponseFormatter(response,
+		Response[] responses = duplicateResponse(response);
+		emitLog(HttpEntityFactory.createHttpResponseFormatter(responses[0],
 				headerConverter,
 				cookieConverter,
 				contentPrettiers,
 				bodyTypeMap
 		));
-		return response;
+		return responses[1];
 	}
 
 	public ReportPortalOkHttp3LoggingInterceptor setBodyTypeMap(@Nonnull Map<String, BodyType> typeMap) {
