@@ -71,4 +71,4 @@ release {
     }
 }
 
-// build.dependsOn jacocoTestReport
+build.dependsOn jacocoTestReport
