@@ -42,10 +42,8 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -120,7 +118,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 
 			@NotNull
 			@Override
-			public Response proceed(@NotNull Request request) throws IOException {
+			public Response proceed(@NotNull Request request) {
 				return response;
 			}
 
@@ -240,31 +238,30 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		return mockBasicRequest(contentType, new Headers.Builder().build());
 	}
 
-	private static Response mockBasicResponse(@Nullable String contentType, @Nonnull Headers headers,
-			@Nonnull ResponseBody body) {
-		Response response = mock(Response.class);
-		when(response.code()).thenReturn(STATUS_CODE);
-		when(response.headers()).thenReturn(headers);
-		if (contentType != null) {
-			when(response.body()).thenReturn(body);
-			when(body.contentType()).thenReturn(MediaType.parse(contentType));
-		}
-		when(response.body()).thenReturn(body);
-		return response;
+	private static Response createBasicResponse(@Nullable String contentType, @Nonnull Headers headers,
+			@Nullable ResponseBody body) {
+		Response.Builder builder = new Response.Builder();
+		builder.headers(headers)
+				.code(STATUS_CODE)
+				.body(body)
+				.request(mockBasicRequest(contentType))
+				.protocol(Protocol.HTTP_1_1)
+				.message("");
+		return builder.build();
 	}
 
-	private static Response mockBasicResponse(@Nullable String contentType, @Nonnull Headers headers) {
-		return mockBasicResponse(contentType, headers, mock(ResponseBody.class));
+	private static Response createBasicResponse(@Nullable String contentType, @Nonnull Headers headers) {
+		return createBasicResponse(contentType, headers, null);
 	}
 
-	private static Response mockBasicResponse(String contentType) {
-		return mockBasicResponse(contentType, new Headers.Builder().build());
+	private static Response createBasicResponse(String contentType) {
+		return createBasicResponse(contentType, new Headers.Builder().build());
 	}
 
 	@Test
 	public void test_logger_null_values() throws IOException {
 		Request request = mockBasicRequest(null);
-		Response response = mockBasicResponse(null);
+		Response response = createBasicResponse(null);
 
 		List<Object> logs = new ArrayList<>();
 		logs.addAll(runChainBinaryMessageCapture(request, response));
@@ -287,9 +284,8 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		}).when(requestBody).writeTo(any());
 		Request request = mockBasicRequest(mimeType, new Headers.Builder().build(), requestBody);
 
-		ResponseBody responseBody = mock(ResponseBody.class);
-		when(responseBody.string()).thenReturn(responseBodyStr);
-		Response response = mockBasicResponse(mimeType, new Headers.Builder().build(), responseBody);
+		ResponseBody responseBody = ResponseBody.create(requestBodyStr, MediaType.parse(mimeType));
+		Response response = createBasicResponse(mimeType, new Headers.Builder().build(), responseBody);
 
 		List<String> logs = runChainTextMessageCapture(request, response);
 		assertThat(logs, hasSize(2)); // Request + Response
@@ -312,7 +308,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 	public void test_logger_headers(String contentType) throws IOException {
 		Headers headers = new Headers.Builder().add(HTTP_HEADER, HTTP_HEADER_VALUE).build();
 		Request request = mockBasicRequest(contentType, headers);
-		Response response = mockBasicResponse(contentType, headers);
+		Response response = createBasicResponse(contentType, headers);
 
 		List<Object> logs = new ArrayList<>();
 		logs.addAll(runChainBinaryMessageCapture(request, response));
@@ -329,24 +325,6 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		assertThat(logs.get(1), equalTo(EMPTY_RESPONSE + headerString));
 	}
 
-	private static String formatRequestCookie(Cookie cookie) {
-		return "**Cookies**\n" + String.format("%s: %s; Domain=%s; Expires=%s",
-				cookie.value(),
-				cookie.name(),
-				cookie.domain(),
-				new SimpleDateFormat().format(new Date(cookie.expiresAt()))
-		);
-	}
-
-	private static String formatCookie(Cookie cookie) {
-		return "**Cookies**\n" + String.format("%s: %s; Domain=%s; Expires=%s",
-				cookie.value(),
-				cookie.name(),
-				cookie.domain(),
-				new SimpleDateFormat().format(new Date(cookie.expiresAt()))
-		);
-	}
-
 	@Test
 	public void test_logger_cookies() throws IOException {
 		Headers requestHeaders = new Headers.Builder().add("Cookie", "test=value").build();
@@ -355,7 +333,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		Headers responseHeaders = new Headers.Builder().add("Set-cookie",
 				"test=value; expires=" + expiryDate + "; path=/; secure; httponly"
 		).build();
-		Response response = mockBasicResponse(HTML_TYPE, responseHeaders);
+		Response response = createBasicResponse(HTML_TYPE, responseHeaders);
 
 		List<String> logs = runChainTextMessageCapture(request, response);
 		assertThat(logs, hasSize(2)); // Request + Response
@@ -384,7 +362,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 				)
 				.build();
 		Request request = mockBasicRequest(contentType, headers);
-		Response response = mockBasicResponse(contentType, responseHeaders);
+		Response response = createBasicResponse(contentType, responseHeaders);
 
 		List<Object> logs = new ArrayList<>();
 		logs.addAll(runChainBinaryMessageCapture(request, response));
@@ -408,24 +386,23 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 	}
 
 	@Test
-	public void test_logger_null_image_body() throws IOException {
+	public void test_logger_empty_image_body() throws IOException {
 		String mimeType = ContentType.IMAGE_JPEG.getMimeType();
 		Request request = mockBasicRequest(mimeType);
 		RequestBody requestBody = mock(RequestBody.class);
 		when(request.body()).thenReturn(requestBody);
 		when(requestBody.contentType()).thenReturn(MediaType.parse(mimeType));
 
-		Response response = mockBasicResponse(mimeType);
-		ResponseBody responseBodyObject = mock(ResponseBody.class);
-		when(response.body()).thenReturn(responseBodyObject);
-		when(responseBodyObject.contentType()).thenReturn(MediaType.parse(mimeType));
+		ResponseBody responseBody = mock(ResponseBody.class);
+		when(responseBody.bytes()).thenReturn(new byte[0]);
+		Response response = createBasicResponse(mimeType, new Headers.Builder().build(), responseBody);
 
 		List<Object> logs = new ArrayList<>();
 		logs.addAll(runChainBinaryMessageCapture(request, response));
 		logs.addAll(runChainTextMessageCapture(request, response));
 		assertThat(logs, hasSize(2)); // Request + Response
 		assertThat(((ReportPortalMessage) logs.get(0)).getMessage(), equalTo(EMPTY_REQUEST));
-		assertThat(logs.get(1), equalTo(EMPTY_RESPONSE));
+		assertThat(((ReportPortalMessage) logs.get(1)).getMessage(), equalTo(EMPTY_RESPONSE));
 	}
 
 	@SuppressWarnings("SameParameterValue")
@@ -456,12 +433,8 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 			return null;
 		}).when(requestBody).writeTo(any(BufferedSink.class));
 
-		Response response = mockBasicResponse(mimeType);
-		ResponseBody responseBody = mock(ResponseBody.class);
-		when(response.body()).thenReturn(responseBody);
-		when(responseBody.contentType()).thenReturn(MediaType.parse(mimeType));
-		when(responseBody.bytes()).thenReturn(image);
-		when(responseBody.byteStream()).thenReturn(new ByteArrayInputStream(image));
+		ResponseBody responseBody = ResponseBody.create(image, MediaType.parse(mimeType));
+		Response response = createBasicResponse(mimeType, new Headers.Builder().build(), responseBody);
 
 		List<ReportPortalMessage> logs = runChainBinaryMessageCapture(request, response);
 		assertThat(logs, hasSize(2)); // Request + Response
@@ -482,7 +455,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		when(request.headers()).thenReturn(new Headers.Builder().build());
 		when(request.body()).thenReturn(null);
 
-		List<String> logs = runChainTextMessageCapture(request, mockBasicResponse(null));
+		List<String> logs = runChainTextMessageCapture(request, createBasicResponse(null));
 		assertThat(logs, hasSize(2)); // Request + Response
 		assertThat(logs.get(0), equalTo(EMPTY_REQUEST));
 		assertThat(logs.get(1), equalTo(EMPTY_RESPONSE));
@@ -496,7 +469,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 				mock(MultipartBody.class)
 		);
 
-		List<String> logs = runChainTextMessageCapture(requestSpecification, mockBasicResponse(null));
+		List<String> logs = runChainTextMessageCapture(requestSpecification, createBasicResponse(null));
 		assertThat(logs, hasSize(2)); // Request + Response
 		assertThat(logs.get(0), equalTo(EMPTY_REQUEST));
 	}
@@ -530,7 +503,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		when(request.body()).thenReturn(body);
 
 		Triple<List<String>, List<String>, List<ReportPortalMessage>> logs = runChainComplexMessageCapture(request,
-				mockBasicResponse(null)
+				createBasicResponse(null)
 		);
 		assertThat(logs.getLeft(), hasSize(1));
 		assertThat(logs.getMiddle(), hasSize(1));
@@ -574,7 +547,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		MultipartBody requestBody = getBinaryTextBody(textType, message, ContentType.IMAGE_JPEG.getMimeType(), IMAGE);
 		when(requestSpecification.body()).thenReturn(requestBody);
 		Triple<List<String>, List<String>, List<ReportPortalMessage>> logs = runChainComplexMessageCapture(requestSpecification,
-				mockBasicResponse(null)
+				createBasicResponse(null)
 		);
 		assertThat(logs.getLeft(), hasSize(1));
 		assertThat(logs.getMiddle(), hasSize(2));
@@ -596,19 +569,24 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 	}
 
 	public static Iterable<Object[]> invalidContentTypes() {
-		return Arrays.asList(new Object[] { "", ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
-				new Object[] { null, ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
-				new Object[] { "*/*", "*/*" },
-				new Object[] { "something invalid", ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
-				new Object[] { "/", ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
-				new Object[] { "#*'\\`%^!@/\"$;", ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
-				new Object[] { "a/a;F#%235f\\=f324$%^&", ContentType.APPLICATION_OCTET_STREAM.getMimeType() }
+		return Arrays.asList(new Object[] { "", ContentType.APPLICATION_OCTET_STREAM.getMimeType(),
+						ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
+				new Object[] { "*/*", ContentType.APPLICATION_OCTET_STREAM.getMimeType(), "*/*" },
+				new Object[] { "something invalid", ContentType.APPLICATION_OCTET_STREAM.getMimeType(),
+						ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
+				new Object[] { "/", ContentType.APPLICATION_OCTET_STREAM.getMimeType(),
+						ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
+				new Object[] { "#*'\\`%^!@/\"$;", ContentType.APPLICATION_OCTET_STREAM.getMimeType(),
+						ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
+				new Object[] { "a/a;F#%235f\\=f324$%^&", ContentType.APPLICATION_OCTET_STREAM.getMimeType(),
+						ContentType.APPLICATION_OCTET_STREAM.getMimeType() }
 		);
 	}
 
 	@ParameterizedTest
 	@MethodSource("invalidContentTypes")
-	public void test_logger_invalid_content_type(String mimeType, String expectedType) throws IOException {
+	public void test_logger_invalid_content_type(String mimeType, String expectedRequestType,
+			String expectedResponseType) throws IOException {
 		byte[] image = getResource(IMAGE);
 		Request request = mockBasicRequest(mimeType);
 		RequestBody body = mock(RequestBody.class);
@@ -617,15 +595,10 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 			sink.write(image);
 			return null;
 		}).when(body).writeTo(any(BufferedSink.class));
-		ofNullable(mimeType).ifPresent(type -> when(body.contentType()).thenReturn(MediaType.parse(type)));
 		when(request.body()).thenReturn(body);
 
-		Response response = mockBasicResponse(mimeType);
-		ResponseBody responseBody = mock(ResponseBody.class);
-		ofNullable(mimeType).ifPresent(type -> when(responseBody.contentType()).thenReturn(MediaType.parse(type)));
-		when(response.body()).thenReturn(responseBody);
-		when(responseBody.bytes()).thenReturn(image);
-		when(responseBody.byteStream()).thenReturn(new ByteArrayInputStream(image));
+		ResponseBody responseBody = ResponseBody.create(image, MediaType.parse(mimeType));
+		Response response = createBasicResponse(mimeType, new Headers.Builder().build(), responseBody);
 
 		Triple<List<String>, List<String>, List<ReportPortalMessage>> logs = runChainComplexMessageCapture(request,
 				response
@@ -634,8 +607,8 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		assertThat(logs.getRight().get(0).getMessage(), equalTo(EMPTY_REQUEST));
 		assertThat(logs.getRight().get(1).getMessage(), equalTo(EMPTY_RESPONSE));
 
-		assertThat(logs.getRight().get(0).getData().getMediaType(), equalTo(expectedType));
-		assertThat(logs.getRight().get(1).getData().getMediaType(), equalTo(expectedType));
+		assertThat(logs.getRight().get(0).getData().getMediaType(), equalTo(expectedRequestType));
+		assertThat(logs.getRight().get(1).getData().getMediaType(), equalTo(expectedResponseType));
 
 		assertThat(logs.getRight().get(0).getData().read(), equalTo(image));
 		assertThat(logs.getRight().get(1).getData().read(), equalTo(image));
@@ -644,7 +617,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 	@Test
 	public void test_log_filter_type() throws IOException {
 		Request requestSpecification = mockBasicRequest(HTML_TYPE);
-		Response responseObject = mockBasicResponse(HTML_TYPE);
+		Response responseObject = createBasicResponse(HTML_TYPE);
 		Triple<List<String>, List<String>, List<ReportPortalMessage>> logs = runChainComplexMessageCapture(
 				requestSpecification,
 				responseObject,
