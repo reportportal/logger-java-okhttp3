@@ -48,6 +48,7 @@ import java.util.stream.StreamSupport;
 
 import static com.epam.reportportal.formatting.http.HttpFormatUtils.getBodyType;
 import static com.epam.reportportal.formatting.http.HttpFormatUtils.getMimeType;
+import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
 /**
@@ -131,8 +132,7 @@ public class HttpEntityFactory {
 		//           Wed, 06-Sep-2023 11:22:09 GMT
 		Date expiryDate = ofNullable(cookieMetadata.get("expires")).map(d -> {
 			try {
-				return new SimpleDateFormat(DefaultCookieConverter.DEFAULT_COOKIE_DATE_FORMAT).parse(d.replace(
-						'-',
+				return new SimpleDateFormat(DefaultCookieConverter.DEFAULT_COOKIE_DATE_FORMAT).parse(d.replace('-',
 						' '
 				));
 			} catch (ParseException e) {
@@ -176,27 +176,29 @@ public class HttpEntityFactory {
 				.headerConverter(headerConverter)
 				.cookieConverter(cookieConverter)
 				.prettiers(prettiers);
+		RequestBody body = request.body();
+		if (body == null) {
+			return builder.build();
+		}
 
-		String contentType = ofNullable(request.body()).map(RequestBody::contentType)
-				.map(MediaType::toString)
-				.orElse(null);
+		String contentType = ofNullable(body.contentType()).map(MediaType::toString).orElse(null);
 		String type = getMimeType(contentType);
 		BodyType bodyType = getBodyType(contentType, bodyTypeMap);
 		switch (bodyType) {
 			case TEXT:
-				builder.bodyText(type, ofNullable(request.body()).map(HttpEntityFactory::toString).orElse(null));
+				builder.bodyText(type, toString(body));
 				break;
 			case FORM:
-				ofNullable(request.body()).filter(b -> b instanceof FormBody)
+				of(body).filter(b -> b instanceof FormBody)
 						.map(b -> (FormBody) b)
-						.ifPresent(body -> builder.bodyParams(IntStream.range(0, body.size())
-								.mapToObj(i -> new Param(body.name(i), body.value(i)))
+						.ifPresent(b -> builder.bodyParams(IntStream.range(0, b.size())
+								.mapToObj(i -> new Param(b.name(i), b.value(i)))
 								.collect(Collectors.toList())));
 				break;
 			case MULTIPART:
-				ofNullable(request.body()).filter(b -> b instanceof MultipartBody)
+				of(body).filter(b -> b instanceof MultipartBody)
 						.map(b -> (MultipartBody) b)
-						.ifPresent(body -> body.parts().forEach(it -> {
+						.ifPresent(b -> b.parts().forEach(it -> {
 							RequestBody partBody = it.body();
 							String partMimeType = ofNullable(partBody.contentType()).map(Object::toString)
 									.orElse(ContentType.APPLICATION_OCTET_STREAM.getMimeType());
@@ -224,7 +226,7 @@ public class HttpEntityFactory {
 						}));
 				break;
 			default:
-				builder.bodyBytes(type, ofNullable(request.body()).map(HttpEntityFactory::toBytes).orElse(null));
+				builder.bodyBytes(type, toBytes(body));
 		}
 		return builder.build();
 	}
@@ -241,16 +243,18 @@ public class HttpEntityFactory {
 				.filter(HttpEntityFactory::isSetCookie)
 				.forEach(h -> builder.addCookie(toCookie(h)));
 		builder.headerConverter(headerConverter).cookieConverter(cookieConverter).prettiers(prettiers);
+		ResponseBody body = response.body();
+		if (body == null) {
+			return builder.build();
+		}
 
-		String contentType = ofNullable(response.body()).map(ResponseBody::contentType)
-				.map(MediaType::toString)
-				.orElse(null);
+		String contentType = ofNullable(body.contentType()).map(MediaType::toString).orElse(null);
 		String type = getMimeType(contentType);
 		BodyType bodyType = getBodyType(contentType, bodyTypeMap);
 		if (BodyType.TEXT == bodyType) {
-			builder.bodyText(type, ofNullable(response.body()).map(HttpEntityFactory::toString).orElse(null));
+			builder.bodyText(type, toString(body));
 		} else {
-			builder.bodyBytes(type, ofNullable(response.body()).map(HttpEntityFactory::toBytes).orElse(null));
+			builder.bodyBytes(type, toBytes(body));
 		}
 		return builder.build();
 	}
