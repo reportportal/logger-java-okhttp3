@@ -3,6 +3,7 @@
 ## [Unreleased]
 ### Fixed
 - Common field duplication in child class, by @HardNorth
+- Some refactoring, by @HardNorth
 
 ## [5.0.0]
 ### Added
