@@ -33,6 +33,8 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -41,7 +43,6 @@ import java.util.stream.StreamSupport;
 
 import static com.epam.reportportal.formatting.http.HttpFormatUtils.getBodyType;
 import static com.epam.reportportal.formatting.http.HttpFormatUtils.getMimeType;
-import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
 /**
@@ -89,6 +90,53 @@ public class HttpEntityFactory {
 	}
 
 	@Nonnull
+	private static List<Param> toParams(@Nonnull RequestBody body) {
+		if (!(body instanceof FormBody)) {
+			return Collections.emptyList();
+		}
+		FormBody formBody = ((FormBody) body);
+		return IntStream.range(0, formBody.size())
+				.mapToObj(i -> new Param(formBody.name(i), formBody.value(i)))
+				.collect(Collectors.toList());
+
+	}
+
+	@Nonnull
+	private static List<HttpPartFormatter> toParts(@Nonnull RequestBody body,
+			@Nonnull Map<String, BodyType> bodyTypeMap, @Nullable Function<Header, String> partHeaderConverter) {
+		if (!(body instanceof MultipartBody)) {
+			return Collections.emptyList();
+		}
+		MultipartBody multipartBody = (MultipartBody) body;
+		return multipartBody.parts().stream().map(it -> {
+			RequestBody partBody = it.body();
+			String partMimeType = ofNullable(partBody.contentType()).map(Object::toString)
+					.orElse(ContentType.APPLICATION_OCTET_STREAM.getMimeType());
+			BodyType bodyPartType = getBodyType(partMimeType, bodyTypeMap);
+			HttpPartFormatter.Builder partBuilder;
+			if (BodyType.TEXT == bodyPartType) {
+				partBuilder = new HttpPartFormatter.Builder(HttpPartFormatter.PartType.TEXT,
+						partMimeType,
+						toString(partBody)
+				);
+			} else {
+				partBuilder = new HttpPartFormatter.Builder(HttpPartFormatter.PartType.BINARY,
+						partMimeType,
+						toBytes(partBody)
+				);
+			}
+			ofNullable(it.headers()).ifPresent(headers -> headers.forEach(h -> partBuilder.addHeader(new Header(h.getFirst(),
+					h.getSecond()
+			))));
+			ofNullable(it.body().contentType()).map(MediaType::charset)
+					.map(Charset::name)
+					.ifPresent(partBuilder::charset);
+			partBuilder.headerConverter(partHeaderConverter);
+			return partBuilder.build();
+		}).collect(Collectors.toList());
+	}
+
+	@Nonnull
 	public static HttpRequestFormatter createHttpRequestFormatter(@Nonnull Request request,
 			@Nullable Function<String, String> uriConverter, @Nullable Function<Header, String> headerConverter,
 			@Nullable Function<Cookie, String> cookieConverter,
@@ -121,41 +169,10 @@ public class HttpEntityFactory {
 				builder.bodyText(type, toString(body));
 				break;
 			case FORM:
-				of(body).filter(b -> b instanceof FormBody)
-						.map(b -> (FormBody) b)
-						.ifPresent(b -> builder.bodyParams(IntStream.range(0, b.size())
-								.mapToObj(i -> new Param(b.name(i), b.value(i)))
-								.collect(Collectors.toList())));
+				builder.bodyParams(toParams(body));
 				break;
 			case MULTIPART:
-				of(body).filter(b -> b instanceof MultipartBody)
-						.map(b -> (MultipartBody) b)
-						.ifPresent(b -> b.parts().forEach(it -> {
-							RequestBody partBody = it.body();
-							String partMimeType = ofNullable(partBody.contentType()).map(Object::toString)
-									.orElse(ContentType.APPLICATION_OCTET_STREAM.getMimeType());
-							BodyType bodyPartType = getBodyType(partMimeType, bodyTypeMap);
-							HttpPartFormatter.Builder partBuilder;
-							if (BodyType.TEXT == bodyPartType) {
-								partBuilder = new HttpPartFormatter.Builder(HttpPartFormatter.PartType.TEXT,
-										partMimeType,
-										toString(partBody)
-								);
-							} else {
-								partBuilder = new HttpPartFormatter.Builder(HttpPartFormatter.PartType.BINARY,
-										partMimeType,
-										toBytes(partBody)
-								);
-							}
-							ofNullable(it.headers()).ifPresent(headers -> headers.forEach(h -> partBuilder.addHeader(new Header(h.getFirst(),
-									h.getSecond()
-							))));
-							ofNullable(it.body().contentType()).map(MediaType::charset)
-									.map(Charset::name)
-									.ifPresent(partBuilder::charset);
-							partBuilder.headerConverter(partHeaderConverter);
-							builder.addBodyPart(partBuilder.build());
-						}));
+				toParts(body, bodyTypeMap, partHeaderConverter).forEach(builder::addBodyPart);
 				break;
 			default:
 				builder.bodyBytes(type, toBytes(body));
