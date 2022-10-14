@@ -38,17 +38,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static com.epam.reportportal.formatting.http.Constants.BODY_TYPE_MAP;
-import static com.epam.reportportal.formatting.http.Constants.DEFAULT_PRETTIERS;
-
 public class ReportPortalOkHttp3LoggingInterceptor extends AbstractHttpFormatter<ReportPortalOkHttp3LoggingInterceptor>
 		implements Interceptor {
 
 	private final List<Predicate<Request>> requestFilters = new CopyOnWriteArrayList<>();
-
-	private Map<String, Function<String, String>> contentPrettiers = DEFAULT_PRETTIERS;
-
-	private Map<String, BodyType> bodyTypeMap = BODY_TYPE_MAP;
 
 	/**
 	 * Create OKHTTP3 Interceptor with the log level and different converters.
