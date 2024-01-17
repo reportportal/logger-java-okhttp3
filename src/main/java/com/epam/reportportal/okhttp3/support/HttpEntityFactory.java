@@ -24,9 +24,9 @@ import com.epam.reportportal.formatting.http.entities.BodyType;
 import com.epam.reportportal.formatting.http.entities.Cookie;
 import com.epam.reportportal.formatting.http.entities.Header;
 import com.epam.reportportal.formatting.http.entities.Param;
+import com.epam.reportportal.utils.http.ContentType;
 import okhttp3.*;
 import okio.Buffer;
-import org.apache.http.entity.ContentType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -111,7 +111,7 @@ public class HttpEntityFactory {
 		return multipartBody.parts().stream().map(it -> {
 			RequestBody partBody = it.body();
 			String partMimeType = ofNullable(partBody.contentType()).map(Object::toString)
-					.orElse(ContentType.APPLICATION_OCTET_STREAM.getMimeType());
+					.orElse(ContentType.APPLICATION_OCTET_STREAM);
 			BodyType bodyPartType = getBodyType(partMimeType, bodyTypeMap);
 			HttpPartFormatter.Builder partBuilder;
 			if (BodyType.TEXT == bodyPartType) {
