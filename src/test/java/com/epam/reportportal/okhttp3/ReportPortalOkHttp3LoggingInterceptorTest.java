@@ -26,11 +26,10 @@ import com.epam.reportportal.service.Launch;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.step.StepReporter;
 import com.epam.reportportal.utils.files.Utils;
+import com.epam.reportportal.utils.http.ContentType;
 import okhttp3.*;
 import okio.BufferedSink;
 import org.apache.commons.lang3.tuple.Triple;
-import org.apache.http.HttpHeaders;
-import org.apache.http.entity.ContentType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -67,7 +66,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 	private static final int STATUS_CODE = 201;
 	private static final String EMPTY_REQUEST = "**>>> REQUEST**\n" + METHOD + " to " + URI;
 	private static final String EMPTY_RESPONSE = "**<<< RESPONSE**\n" + STATUS_CODE;
-	private static final String HTTP_HEADER = HttpHeaders.CONTENT_TYPE;
+	private static final String HTTP_HEADER = "Content-Type";
 	private static final String HTTP_HEADER_VALUE = JSON_TYPE;
 
 	private static Interceptor.Chain getChain(Request request, Response response) {
@@ -387,7 +386,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 
 	@Test
 	public void test_logger_empty_image_body() throws IOException {
-		String mimeType = ContentType.IMAGE_JPEG.getMimeType();
+		String mimeType = ContentType.IMAGE_JPEG;
 		Request request = mockBasicRequest(mimeType);
 		RequestBody requestBody = mock(RequestBody.class);
 		when(request.body()).thenReturn(requestBody);
@@ -450,7 +449,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 
 	@Test
 	public void test_logger_null_response() throws IOException {
-		String mimeType = ContentType.IMAGE_JPEG.getMimeType();
+		String mimeType = ContentType.IMAGE_JPEG;
 		Request request = mockBasicRequest(mimeType);
 		when(request.headers()).thenReturn(new Headers.Builder().build());
 		when(request.body()).thenReturn(null);
@@ -463,7 +462,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 
 	@Test
 	public void test_logger_empty_multipart() throws IOException {
-		String mimeType = ContentType.MULTIPART_FORM_DATA.getMimeType();
+		String mimeType = ContentType.MULTIPART_FORM_DATA;
 		Request requestSpecification = mockBasicRequest(mimeType,
 				new Headers.Builder().build(),
 				mock(MultipartBody.class)
@@ -490,15 +489,15 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 	private MultipartBody getBinaryBody(String mimeType, String filePath) throws IOException {
 		return getBinaryPart(mimeType,
 				filePath
-		).setType(Objects.requireNonNull(MediaType.parse(ContentType.MULTIPART_FORM_DATA.getMimeType()))).build();
+		).setType(Objects.requireNonNull(MediaType.parse(ContentType.MULTIPART_FORM_DATA))).build();
 	}
 
 	@Test
 	public void test_logger_image_multipart() throws IOException {
 		byte[] image = getResource(IMAGE);
-		String imageType = ContentType.IMAGE_JPEG.getMimeType();
-		MultipartBody body = getBinaryBody(ContentType.IMAGE_JPEG.getMimeType(), IMAGE);
-		String mimeType = ContentType.MULTIPART_FORM_DATA.getMimeType();
+		String imageType = ContentType.IMAGE_JPEG;
+		MultipartBody body = getBinaryBody(ContentType.IMAGE_JPEG, IMAGE);
+		String mimeType = ContentType.MULTIPART_FORM_DATA;
 		Request request = mockBasicRequest(mimeType);
 		when(request.body()).thenReturn(body);
 
@@ -538,13 +537,13 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 	@Test
 	public void test_logger_text_and_image_multipart() throws IOException {
 		byte[] image = getResource(IMAGE);
-		String requestType = ContentType.MULTIPART_FORM_DATA.getMimeType();
-		String imageType = ContentType.IMAGE_JPEG.getMimeType();
-		String textType = ContentType.TEXT_PLAIN.getMimeType();
+		String requestType = ContentType.MULTIPART_FORM_DATA;
+		String imageType = ContentType.IMAGE_JPEG;
+		String textType = ContentType.TEXT_PLAIN;
 
 		String message = "test_message";
 		Request requestSpecification = mockBasicRequest(requestType);
-		MultipartBody requestBody = getBinaryTextBody(textType, message, ContentType.IMAGE_JPEG.getMimeType(), IMAGE);
+		MultipartBody requestBody = getBinaryTextBody(textType, message, ContentType.IMAGE_JPEG, IMAGE);
 		when(requestSpecification.body()).thenReturn(requestBody);
 		Triple<List<String>, List<String>, List<ReportPortalMessage>> logs = runChainComplexMessageCapture(requestSpecification,
 				createBasicResponse(null)
@@ -569,17 +568,17 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 	}
 
 	public static Iterable<Object[]> invalidContentTypes() {
-		return Arrays.asList(new Object[] { "", ContentType.APPLICATION_OCTET_STREAM.getMimeType(),
-						ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
-				new Object[] { "*/*", ContentType.APPLICATION_OCTET_STREAM.getMimeType(), "*/*" },
-				new Object[] { "something invalid", ContentType.APPLICATION_OCTET_STREAM.getMimeType(),
-						ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
-				new Object[] { "/", ContentType.APPLICATION_OCTET_STREAM.getMimeType(),
-						ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
-				new Object[] { "#*'\\`%^!@/\"$;", ContentType.APPLICATION_OCTET_STREAM.getMimeType(),
-						ContentType.APPLICATION_OCTET_STREAM.getMimeType() },
-				new Object[] { "a/a;F#%235f\\=f324$%^&", ContentType.APPLICATION_OCTET_STREAM.getMimeType(),
-						ContentType.APPLICATION_OCTET_STREAM.getMimeType() }
+		return Arrays.asList(new Object[] { "", ContentType.APPLICATION_OCTET_STREAM,
+						ContentType.APPLICATION_OCTET_STREAM },
+				new Object[] { "*/*", ContentType.APPLICATION_OCTET_STREAM, "*/*" },
+				new Object[] { "something invalid", ContentType.APPLICATION_OCTET_STREAM,
+						ContentType.APPLICATION_OCTET_STREAM },
+				new Object[] { "/", ContentType.APPLICATION_OCTET_STREAM,
+						ContentType.APPLICATION_OCTET_STREAM },
+				new Object[] { "#*'\\`%^!@/\"$;", ContentType.APPLICATION_OCTET_STREAM,
+						ContentType.APPLICATION_OCTET_STREAM },
+				new Object[] { "a/a;F#%235f\\=f324$%^&", ContentType.APPLICATION_OCTET_STREAM,
+						ContentType.APPLICATION_OCTET_STREAM }
 		);
 	}
 
