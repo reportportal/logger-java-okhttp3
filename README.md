@@ -1,6 +1,6 @@
 # Report Portal logger for OkHttp3 client
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.epam.reportportal/logger-java-okhttp3.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22com.epam.reportportal%22%20AND%20a:%22logger-java-okhttp3%22)
+[![Maven Central](https://img.shields.io/maven-central/v/com.epam.reportportal/logger-java-okhttp3.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/com.epam.reportportal/logger-java-okhttp3)
 [![CI Build](https://github.com/reportportal/logger-java-okhttp3/actions/workflows/ci.yml/badge.svg)](https://github.com/reportportal/logger-java-okhttp3/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/reportportal/logger-java-okhttp3/branch/develop/graph/badge.svg?token=M2J13Z075Y)](https://codecov.io/gh/reportportal/logger-java-okhttp3)
 [![Join Slack chat!](https://slack.epmrpp.reportportal.io/badge.svg)](https://slack.epmrpp.reportportal.io/)
