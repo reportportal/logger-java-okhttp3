@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- `utils-java-formatting` library version updated on version [5.2.2](https://github.com/reportportal/utils-java-formatting/releases/tag/5.2.2), by @HardNorth
+- `okhttp`, `client-java` and `jsr305` dependencies marked as `compileOnly`, by @HardNorth
 
 ## [5.1.2]
 ### Changed
