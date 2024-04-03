@@ -1,6 +1,10 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- Client version updated on [5.2.11](https://github.com/reportportal/client-java/releases/tag/5.2.11), by @HardNorth
+- `utils-java-formatting` library version updated on version [5.2.2](https://github.com/reportportal/utils-java-formatting/releases/tag/5.2.2), by @HardNorth
+- `okhttp`, `client-java` and `jsr305` dependencies marked as `compileOnly`, by @HardNorth
 
 ## [5.1.2]
 ### Changed
