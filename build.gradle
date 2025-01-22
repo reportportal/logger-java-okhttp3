@@ -37,7 +37,7 @@ repositories {
 }
 
 dependencies {
-    api 'com.epam.reportportal:utils-java-formatting:5.2.3'
+    api 'com.epam.reportportal:utils-java-formatting:5.2.5'
     compileOnly "com.epam.reportportal:client-java:${client_version}"
     compileOnly "com.google.code.findbugs:jsr305:${jsr305_version}"
     compileOnly "com.squareup.okhttp3:okhttp:${okhttp_version}"
@@ -45,7 +45,7 @@ dependencies {
     testImplementation "com.epam.reportportal:client-java:${client_version}"
     testImplementation "com.google.code.findbugs:jsr305:${jsr305_version}"
     testImplementation "com.squareup.okhttp3:okhttp:${okhttp_version}"
-    testImplementation 'com.epam.reportportal:agent-java-test-utils:0.0.2'
+    testImplementation 'com.epam.reportportal:agent-java-test-utils:0.0.7'
 
     testImplementation("org.junit.platform:junit-platform-runner:${junit5_runner_version}") {
         exclude module: 'junit'
