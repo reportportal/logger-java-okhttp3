@@ -25,6 +25,7 @@ import com.epam.reportportal.message.ReportPortalMessage;
 import com.epam.reportportal.service.Launch;
 import com.epam.reportportal.service.ReportPortal;
 import com.epam.reportportal.service.step.StepReporter;
+import com.epam.reportportal.util.test.CommonUtils;
 import com.epam.reportportal.utils.files.Utils;
 import com.epam.reportportal.utils.http.ContentType;
 import okhttp3.*;
@@ -192,7 +193,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 			StepReporter reporter = mock(StepReporter.class);
 			utilities.when(Launch::currentLaunch).thenReturn(launch);
 			when(launch.getStepReporter()).thenReturn(reporter);
-			doNothing().when(reporter).sendStep(any(ItemStatus.class), stepCaptor.capture());
+			when(reporter.sendStep(any(ItemStatus.class), stepCaptor.capture())).thenReturn(CommonUtils.createMaybeUuid());
 			runChain(request, response, mock -> {
 				mock.when(() -> ReportPortal.emitLog(stringArgumentCaptor.capture(), anyString(), any(Date.class)))
 						.thenReturn(Boolean.TRUE);
