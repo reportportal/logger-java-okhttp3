@@ -139,8 +139,8 @@ public class HttpEntityFactory {
 	@Nonnull
 	public static HttpRequestFormatter createHttpRequestFormatter(@Nonnull Request request,
 			@Nullable Function<String, String> uriConverter, @Nullable Function<Header, String> headerConverter,
-			@Nullable Function<Cookie, String> cookieConverter,
-			@Nullable Map<String, Function<String, String>> prettiers,
+			@Nullable Function<Cookie, String> cookieConverter, @Nullable Function<Param, String> paramConverter,
+			@Nullable Map<String, Function<String, String>> prettifiers,
 			@Nullable Function<Header, String> partHeaderConverter, @Nonnull Map<String, BodyType> bodyTypeMap) {
 		HttpRequestFormatter.Builder builder = new HttpRequestFormatter.Builder(request.method(),
 				request.url().toString()
@@ -155,7 +155,8 @@ public class HttpEntityFactory {
 		builder.uriConverter(uriConverter)
 				.headerConverter(headerConverter)
 				.cookieConverter(cookieConverter)
-				.prettiers(prettiers);
+				.paramConverter(paramConverter)
+				.prettifiers(prettifiers);
 		RequestBody body = request.body();
 		if (body == null) {
 			return builder.build();
@@ -183,7 +184,7 @@ public class HttpEntityFactory {
 	@Nonnull
 	public static HttpResponseFormatter createHttpResponseFormatter(@Nonnull Response response,
 			@Nullable Function<Header, String> headerConverter, @Nullable Function<Cookie, String> cookieConverter,
-			@Nullable Map<String, Function<String, String>> prettiers, @Nonnull Map<String, BodyType> bodyTypeMap) {
+			@Nullable Map<String, Function<String, String>> prettifiers, @Nonnull Map<String, BodyType> bodyTypeMap) {
 		HttpResponseFormatter.Builder builder = new HttpResponseFormatter.Builder(response.code(), response.message());
 		StreamSupport.stream(response.headers().spliterator(), false)
 				.filter(h -> !HttpFormatUtils.isSetCookie(h.getFirst()))
@@ -191,7 +192,7 @@ public class HttpEntityFactory {
 		StreamSupport.stream(response.headers().spliterator(), false)
 				.filter(h -> HttpFormatUtils.isSetCookie(h.getFirst()))
 				.forEach(h -> builder.addCookie(HttpFormatUtils.toCookie(h.getSecond())));
-		builder.headerConverter(headerConverter).cookieConverter(cookieConverter).prettiers(prettiers);
+		builder.headerConverter(headerConverter).cookieConverter(cookieConverter).prettifiers(prettifiers);
 		ResponseBody body = response.body();
 		if (body == null) {
 			return builder.build();

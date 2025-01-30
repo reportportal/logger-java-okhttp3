@@ -17,8 +17,8 @@
 package com.epam.reportportal.okhttp3;
 
 import com.epam.reportportal.formatting.http.Constants;
-import com.epam.reportportal.formatting.http.prettiers.JsonPrettier;
-import com.epam.reportportal.formatting.http.prettiers.XmlPrettier;
+import com.epam.reportportal.formatting.http.prettifiers.JsonPrettifier;
+import com.epam.reportportal.formatting.http.prettifiers.XmlPrettifier;
 import com.epam.reportportal.listeners.ItemStatus;
 import com.epam.reportportal.listeners.LogLevel;
 import com.epam.reportportal.message.ReportPortalMessage;
@@ -142,49 +142,48 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 	}
 
 	public static Iterable<Object[]> requestData() {
-		return Arrays.asList(new Object[] { JSON_TYPE, "{\"object\": {\"key\": \"value\"}}",
-						"{\"object\": {\"key\": \"value\"}}", JsonPrettier.INSTANCE, null, null },
+		return Arrays.asList(
+				new Object[] { JSON_TYPE, "{\"object\": {\"key\": \"value\"}}", "{\"object\": {\"key\": \"value\"}}",
+						JsonPrettifier.INSTANCE, null, null },
 				new Object[] { "application/xml", "<test><key><value>value</value></key></test>",
-						"<test><key><value>value</value></key></test>", XmlPrettier.INSTANCE, null, null }
+						"<test><key><value>value</value></key></test>", XmlPrettifier.INSTANCE, null, null }
 		);
 	}
 
-	private void runChain(Request request, Response response, Consumer<MockedStatic<ReportPortal>> mocks,
-			Interceptor interceptor) throws IOException {
+	private void runChain(Request request, Response response, Consumer<MockedStatic<ReportPortal>> mocks, Interceptor interceptor)
+			throws IOException {
 		try (MockedStatic<ReportPortal> utilities = Mockito.mockStatic(ReportPortal.class)) {
 			mocks.accept(utilities);
 			interceptor.intercept(getChain(request, response));
 		}
 	}
 
-	private void runChain(Request request, Response response, Consumer<MockedStatic<ReportPortal>> mocks)
-			throws IOException {
+	private void runChain(Request request, Response response, Consumer<MockedStatic<ReportPortal>> mocks) throws IOException {
 		runChain(request, response, mocks, new ReportPortalOkHttp3LoggingInterceptor(LogLevel.INFO));
 	}
 
 	private List<String> runChainTextMessageCapture(Request request, Response response) throws IOException {
 		ArgumentCaptor<String> logCapture = ArgumentCaptor.forClass(String.class);
-		runChain(request,
+		runChain(
+				request,
 				response,
-				mock -> mock.when(() -> ReportPortal.emitLog(logCapture.capture(), anyString(), any(Date.class)))
-						.thenReturn(Boolean.TRUE)
+				mock -> mock.when(() -> ReportPortal.emitLog(logCapture.capture(), anyString(), any(Date.class))).thenReturn(Boolean.TRUE)
 		);
 		return logCapture.getAllValues();
 	}
 
-	private List<ReportPortalMessage> runChainBinaryMessageCapture(Request request, Response response)
-			throws IOException {
+	private List<ReportPortalMessage> runChainBinaryMessageCapture(Request request, Response response) throws IOException {
 		ArgumentCaptor<ReportPortalMessage> logCapture = ArgumentCaptor.forClass(ReportPortalMessage.class);
-		runChain(request,
+		runChain(
+				request,
 				response,
-				mock -> mock.when(() -> ReportPortal.emitLog(logCapture.capture(), anyString(), any(Date.class)))
-						.thenReturn(Boolean.TRUE)
+				mock -> mock.when(() -> ReportPortal.emitLog(logCapture.capture(), anyString(), any(Date.class))).thenReturn(Boolean.TRUE)
 		);
 		return logCapture.getAllValues();
 	}
 
-	private Triple<List<String>, List<String>, List<ReportPortalMessage>> runChainComplexMessageCapture(Request request,
-			Response response, Interceptor interceptor) throws IOException {
+	private Triple<List<String>, List<String>, List<ReportPortalMessage>> runChainComplexMessageCapture(Request request, Response response,
+			Interceptor interceptor) throws IOException {
 		ArgumentCaptor<String> stepCaptor = ArgumentCaptor.forClass(String.class);
 		ArgumentCaptor<String> stringArgumentCaptor = ArgumentCaptor.forClass(String.class);
 		ArgumentCaptor<ReportPortalMessage> messageArgumentCaptor = ArgumentCaptor.forClass(ReportPortalMessage.class);
@@ -194,30 +193,29 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 			utilities.when(Launch::currentLaunch).thenReturn(launch);
 			when(launch.getStepReporter()).thenReturn(reporter);
 			when(reporter.sendStep(any(ItemStatus.class), stepCaptor.capture())).thenReturn(CommonUtils.createMaybeUuid());
-			runChain(request, response, mock -> {
-				mock.when(() -> ReportPortal.emitLog(stringArgumentCaptor.capture(), anyString(), any(Date.class)))
-						.thenReturn(Boolean.TRUE);
-				mock.when(() -> ReportPortal.emitLog(messageArgumentCaptor.capture(), anyString(), any(Date.class)))
-						.thenReturn(Boolean.TRUE);
-			}, interceptor);
+			runChain(
+					request, response, mock -> {
+						mock.when(() -> ReportPortal.emitLog(stringArgumentCaptor.capture(), anyString(), any(Date.class)))
+								.thenReturn(Boolean.TRUE);
+						mock.when(() -> ReportPortal.emitLog(messageArgumentCaptor.capture(), anyString(), any(Date.class)))
+								.thenReturn(Boolean.TRUE);
+					}, interceptor
+			);
 		}
-		return Triple.of(stepCaptor.getAllValues(),
-				stringArgumentCaptor.getAllValues(),
-				messageArgumentCaptor.getAllValues()
-		);
+		return Triple.of(stepCaptor.getAllValues(), stringArgumentCaptor.getAllValues(), messageArgumentCaptor.getAllValues());
 	}
 
 	@SuppressWarnings("SameParameterValue")
-	private Triple<List<String>, List<String>, List<ReportPortalMessage>> runChainComplexMessageCapture(
-			Request requestSpecification, Response responseObject) throws IOException {
-		return runChainComplexMessageCapture(requestSpecification,
+	private Triple<List<String>, List<String>, List<ReportPortalMessage>> runChainComplexMessageCapture(Request requestSpecification,
+			Response responseObject) throws IOException {
+		return runChainComplexMessageCapture(
+				requestSpecification,
 				responseObject,
 				new ReportPortalOkHttp3LoggingInterceptor(LogLevel.INFO)
 		);
 	}
 
-	private static Request mockBasicRequest(@Nullable String contentType, @Nonnull Headers headers,
-			@Nonnull RequestBody body) {
+	private static Request mockBasicRequest(@Nullable String contentType, @Nonnull Headers headers, @Nonnull RequestBody body) {
 		Request request = mock(Request.class);
 		when(request.method()).thenReturn(METHOD);
 		when(request.url()).thenReturn(HttpUrl.parse(URI));
@@ -238,8 +236,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		return mockBasicRequest(contentType, new Headers.Builder().build());
 	}
 
-	private static Response createBasicResponse(@Nullable String contentType, @Nonnull Headers headers,
-			@Nullable ResponseBody body) {
+	private static Response createBasicResponse(@Nullable String contentType, @Nonnull Headers headers, @Nullable ResponseBody body) {
 		Response.Builder builder = new Response.Builder();
 		builder.headers(headers)
 				.code(STATUS_CODE)
@@ -274,8 +271,8 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 
 	@ParameterizedTest
 	@MethodSource("requestData")
-	public void test_logger_text_body(String mimeType, String requestBodyStr, String responseBodyStr,
-			Function<String, String> prettier) throws IOException {
+	public void test_logger_text_body(String mimeType, String requestBodyStr, String responseBodyStr, Function<String, String> prettier)
+			throws IOException {
 		RequestBody requestBody = mock(RequestBody.class);
 		doAnswer(i -> {
 			BufferedSink sink = i.getArgument(0);
@@ -330,7 +327,8 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		Headers requestHeaders = new Headers.Builder().add("Cookie", "test=value").build();
 		Request request = mockBasicRequest(HTML_TYPE, requestHeaders);
 		String expiryDate = "Tue, 06 Sep 2022 09:32:51 UTC";
-		Headers responseHeaders = new Headers.Builder().add("Set-cookie",
+		Headers responseHeaders = new Headers.Builder().add(
+				"Set-cookie",
 				"test=value; expires=" + expiryDate + "; path=/; secure; httponly"
 		).build();
 		Response response = createBasicResponse(HTML_TYPE, responseHeaders);
@@ -339,8 +337,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		assertThat(logs, hasSize(2)); // Request + Response
 
 		String requestHeaderString = "\n\n**Cookies**\n" + "test: value";
-		String responseHeaderString =
-				"\n\n**Cookies**\n" + "test: value; Path=/; Secure=true; HttpOnly=true; Expires=" + expiryDate;
+		String responseHeaderString = "\n\n**Cookies**\n" + "test: value; Path=/; Secure=true; HttpOnly=true; Expires=" + expiryDate;
 
 		assertThat(logs.get(0), equalTo(EMPTY_REQUEST + requestHeaderString));
 		assertThat(logs.get(1), equalTo(EMPTY_RESPONSE + responseHeaderString));
@@ -350,16 +347,12 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 	@MethodSource("testTypes")
 	public void test_logger_headers_and_cookies(String contentType) throws IOException {
 
-		Headers headers = new Headers.Builder().add(HTTP_HEADER, HTTP_HEADER_VALUE)
-				.add("Cookie", "test=value; tz=Europe%2FMinsk")
-				.build();
+		Headers headers = new Headers.Builder().add(HTTP_HEADER, HTTP_HEADER_VALUE).add("Cookie", "test=value; tz=Europe%2FMinsk").build();
 		String expiryDate1 = "Tue, 06 Sep 2022 09:32:51 UTC";
 		String expiryDate2 = "Tue, 06 Sep 2022 09:32:51 UTC";
 		Headers responseHeaders = new Headers.Builder().add(HTTP_HEADER, HTTP_HEADER_VALUE)
 				.add("Set-cookie", "test=value; comment=test comment; expires=" + expiryDate1 + "; path=/; version=1")
-				.add("Set-cookie",
-						"tz=Europe%2FMinsk; path=/; expires=" + expiryDate2 + "; secure; HttpOnly; SameSite=Lax"
-				)
+				.add("Set-cookie", "tz=Europe%2FMinsk; path=/; expires=" + expiryDate2 + "; secure; HttpOnly; SameSite=Lax")
 				.build();
 		Request request = mockBasicRequest(contentType, headers);
 		Response response = createBasicResponse(contentType, responseHeaders);
@@ -370,8 +363,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		assertThat(logs, hasSize(2)); // Request + Response
 
 		String requestHeaderString =
-				"\n\n**Headers**\n" + HTTP_HEADER + ": " + HTTP_HEADER_VALUE + "\n\n**Cookies**\n" + "test: value\n"
-						+ "tz: Europe/Minsk";
+				"\n\n**Headers**\n" + HTTP_HEADER + ": " + HTTP_HEADER_VALUE + "\n\n**Cookies**\n" + "test: value\n" + "tz: Europe/Minsk";
 
 		String responseHeaderString = "\n\n**Headers**\n" + HTTP_HEADER + ": " + HTTP_HEADER_VALUE + "\n\n**Cookies**\n"
 				+ "test: value; Comment=test comment; Path=/; Expires=" + expiryDate1 + "; Version=1\n"
@@ -464,10 +456,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 	@Test
 	public void test_logger_empty_multipart() throws IOException {
 		String mimeType = ContentType.MULTIPART_FORM_DATA;
-		Request requestSpecification = mockBasicRequest(mimeType,
-				new Headers.Builder().build(),
-				mock(MultipartBody.class)
-		);
+		Request requestSpecification = mockBasicRequest(mimeType, new Headers.Builder().build(), mock(MultipartBody.class));
 
 		List<String> logs = runChainTextMessageCapture(requestSpecification, createBasicResponse(null));
 		assertThat(logs, hasSize(2)); // Request + Response
@@ -488,9 +477,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 
 	@SuppressWarnings("SameParameterValue")
 	private MultipartBody getBinaryBody(String mimeType, String filePath) throws IOException {
-		return getBinaryPart(mimeType,
-				filePath
-		).setType(Objects.requireNonNull(MediaType.parse(ContentType.MULTIPART_FORM_DATA))).build();
+		return getBinaryPart(mimeType, filePath).setType(Objects.requireNonNull(MediaType.parse(ContentType.MULTIPART_FORM_DATA))).build();
 	}
 
 	@Test
@@ -502,7 +489,8 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		Request request = mockBasicRequest(mimeType);
 		when(request.body()).thenReturn(body);
 
-		Triple<List<String>, List<String>, List<ReportPortalMessage>> logs = runChainComplexMessageCapture(request,
+		Triple<List<String>, List<String>, List<ReportPortalMessage>> logs = runChainComplexMessageCapture(
+				request,
 				createBasicResponse(null)
 		);
 		assertThat(logs.getLeft(), hasSize(1));
@@ -511,19 +499,18 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 
 		assertThat(logs.getLeft().get(0), equalTo(EMPTY_REQUEST));
 		assertThat(logs.getMiddle().get(0), equalTo(EMPTY_RESPONSE));
-		assertThat(logs.getRight().get(0).getMessage(),
+		assertThat(
+				logs.getRight().get(0).getMessage(),
 				equalTo(Constants.HEADERS_TAG + Constants.LINE_DELIMITER
-						+ "Content-Disposition: form-data; name=\"file\"; filename=\"pug/lucky.jpg\""
-						+ Constants.LINE_DELIMITER + Constants.LINE_DELIMITER + Constants.BODY_PART_TAG + "\n"
-						+ imageType)
+						+ "Content-Disposition: form-data; name=\"file\"; filename=\"pug/lucky.jpg\"" + Constants.LINE_DELIMITER
+						+ Constants.LINE_DELIMITER + Constants.BODY_PART_TAG + "\n" + imageType)
 		);
 		assertThat(logs.getRight().get(0).getData().getMediaType(), equalTo(imageType));
 		assertThat(logs.getRight().get(0).getData().read(), equalTo(image));
 	}
 
 	@SuppressWarnings("SameParameterValue")
-	private MultipartBody getBinaryTextBody(String textType, String text, String binaryType, String filePath)
-			throws IOException {
+	private MultipartBody getBinaryTextBody(String textType, String text, String binaryType, String filePath) throws IOException {
 		MultipartBody.Builder builder = getBinaryPart(binaryType, filePath);
 		RequestBody body = mock(RequestBody.class);
 		doAnswer(i -> {
@@ -546,7 +533,8 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		Request requestSpecification = mockBasicRequest(requestType);
 		MultipartBody requestBody = getBinaryTextBody(textType, message, ContentType.IMAGE_JPEG, IMAGE);
 		when(requestSpecification.body()).thenReturn(requestBody);
-		Triple<List<String>, List<String>, List<ReportPortalMessage>> logs = runChainComplexMessageCapture(requestSpecification,
+		Triple<List<String>, List<String>, List<ReportPortalMessage>> logs = runChainComplexMessageCapture(
+				requestSpecification,
 				createBasicResponse(null)
 		);
 		assertThat(logs.getLeft(), hasSize(1));
@@ -558,35 +546,31 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		assertThat(logs.getMiddle().get(0), equalTo(Constants.BODY_PART_TAG + "\n```\n" + message + "\n```"));
 		assertThat(logs.getMiddle().get(1), equalTo(EMPTY_RESPONSE));
 
-		assertThat(logs.getRight().get(0).getMessage(),
+		assertThat(
+				logs.getRight().get(0).getMessage(),
 				equalTo(Constants.HEADERS_TAG + Constants.LINE_DELIMITER
-						+ "Content-Disposition: form-data; name=\"file\"; filename=\"pug/lucky.jpg\""
-						+ Constants.LINE_DELIMITER + Constants.LINE_DELIMITER + Constants.BODY_PART_TAG + "\n"
-						+ imageType)
+						+ "Content-Disposition: form-data; name=\"file\"; filename=\"pug/lucky.jpg\"" + Constants.LINE_DELIMITER
+						+ Constants.LINE_DELIMITER + Constants.BODY_PART_TAG + "\n" + imageType)
 		);
 		assertThat(logs.getRight().get(0).getData().getMediaType(), equalTo(imageType));
 		assertThat(logs.getRight().get(0).getData().read(), equalTo(image));
 	}
 
 	public static Iterable<Object[]> invalidContentTypes() {
-		return Arrays.asList(new Object[] { "", ContentType.APPLICATION_OCTET_STREAM,
-						ContentType.APPLICATION_OCTET_STREAM },
+		return Arrays.asList(
+				new Object[] { "", ContentType.APPLICATION_OCTET_STREAM, ContentType.APPLICATION_OCTET_STREAM },
 				new Object[] { "*/*", ContentType.APPLICATION_OCTET_STREAM, "*/*" },
-				new Object[] { "something invalid", ContentType.APPLICATION_OCTET_STREAM,
-						ContentType.APPLICATION_OCTET_STREAM },
-				new Object[] { "/", ContentType.APPLICATION_OCTET_STREAM,
-						ContentType.APPLICATION_OCTET_STREAM },
-				new Object[] { "#*'\\`%^!@/\"$;", ContentType.APPLICATION_OCTET_STREAM,
-						ContentType.APPLICATION_OCTET_STREAM },
-				new Object[] { "a/a;F#%235f\\=f324$%^&", ContentType.APPLICATION_OCTET_STREAM,
-						ContentType.APPLICATION_OCTET_STREAM }
+				new Object[] { "something invalid", ContentType.APPLICATION_OCTET_STREAM, ContentType.APPLICATION_OCTET_STREAM },
+				new Object[] { "/", ContentType.APPLICATION_OCTET_STREAM, ContentType.APPLICATION_OCTET_STREAM },
+				new Object[] { "#*'\\`%^!@/\"$;", ContentType.APPLICATION_OCTET_STREAM, ContentType.APPLICATION_OCTET_STREAM },
+				new Object[] { "a/a;F#%235f\\=f324$%^&", ContentType.APPLICATION_OCTET_STREAM, ContentType.APPLICATION_OCTET_STREAM }
 		);
 	}
 
 	@ParameterizedTest
 	@MethodSource("invalidContentTypes")
-	public void test_logger_invalid_content_type(String mimeType, String expectedRequestType,
-			String expectedResponseType) throws IOException {
+	public void test_logger_invalid_content_type(String mimeType, String expectedRequestType, String expectedResponseType)
+			throws IOException {
 		byte[] image = getResource(IMAGE);
 		Request request = mockBasicRequest(mimeType);
 		RequestBody body = mock(RequestBody.class);
@@ -600,9 +584,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		ResponseBody responseBody = ResponseBody.create(image, MediaType.parse(mimeType));
 		Response response = createBasicResponse(mimeType, new Headers.Builder().build(), responseBody);
 
-		Triple<List<String>, List<String>, List<ReportPortalMessage>> logs = runChainComplexMessageCapture(request,
-				response
-		);
+		Triple<List<String>, List<String>, List<ReportPortalMessage>> logs = runChainComplexMessageCapture(request, response);
 		assertThat(logs.getRight(), hasSize(2)); // Request + Response
 		assertThat(logs.getRight().get(0).getMessage(), equalTo(EMPTY_REQUEST));
 		assertThat(logs.getRight().get(1).getMessage(), equalTo(EMPTY_RESPONSE));
