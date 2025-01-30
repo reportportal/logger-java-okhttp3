@@ -18,11 +18,12 @@ package com.epam.reportportal.okhttp3;
 
 import com.epam.reportportal.formatting.AbstractHttpFormatter;
 import com.epam.reportportal.formatting.http.converters.DefaultCookieConverter;
+import com.epam.reportportal.formatting.http.converters.DefaultFormParamConverter;
 import com.epam.reportportal.formatting.http.converters.DefaultHttpHeaderConverter;
 import com.epam.reportportal.formatting.http.converters.DefaultUriConverter;
-import com.epam.reportportal.formatting.http.entities.BodyType;
 import com.epam.reportportal.formatting.http.entities.Cookie;
 import com.epam.reportportal.formatting.http.entities.Header;
+import com.epam.reportportal.formatting.http.entities.Param;
 import com.epam.reportportal.listeners.LogLevel;
 import com.epam.reportportal.okhttp3.support.HttpEntityFactory;
 import okhttp3.*;
@@ -30,10 +31,7 @@ import okhttp3.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -42,6 +40,31 @@ public class ReportPortalOkHttp3LoggingInterceptor extends AbstractHttpFormatter
 		implements Interceptor {
 
 	private final List<Predicate<Request>> requestFilters = new CopyOnWriteArrayList<>();
+
+	protected final Function<Param, String> paramConverter;
+
+	/**
+	 * Create OKHTTP3 Interceptor with the log level and different converters.
+	 *
+	 * @param defaultLogLevel           log level on which OKHTTP3 requests/responses will appear on Report Portal
+	 * @param headerConvertFunction     if you want to preprocess your HTTP Headers before they appear on Report Portal
+	 *                                  provide this custom function for the class, default function formats it like
+	 *                                  that: <code>header.getName() + ": " + header.getValue()</code>
+	 * @param partHeaderConvertFunction the same as for HTTP Headers, but for parts in Multipart request
+	 * @param cookieConvertFunction     the same as 'headerConvertFunction' param but for Cookies, default function
+	 *                                  formats Cookies with <code>toString</code> method
+	 * @param uriConverterFunction      the same as 'headerConvertFunction' param but for URI, default function returns
+	 *                                  URI "as is"
+	 * @param paramConverter            the same as 'headerConvertFunction' param but for Web Form Params, default function returns
+	 *                                  <code>param.getName() + ": " + param.getValue()</code>
+	 */
+	public ReportPortalOkHttp3LoggingInterceptor(@Nonnull LogLevel defaultLogLevel,
+			@Nullable Function<Header, String> headerConvertFunction, @Nullable Function<Header, String> partHeaderConvertFunction,
+			@Nullable Function<Cookie, String> cookieConvertFunction, @Nullable Function<String, String> uriConverterFunction,
+			@Nullable Function<Param, String> paramConverter) {
+		super(defaultLogLevel, headerConvertFunction, partHeaderConvertFunction, cookieConvertFunction, uriConverterFunction);
+		this.paramConverter = paramConverter != null ? paramConverter : DefaultFormParamConverter.INSTANCE;
+	}
 
 	/**
 	 * Create OKHTTP3 Interceptor with the log level and different converters.
@@ -57,16 +80,10 @@ public class ReportPortalOkHttp3LoggingInterceptor extends AbstractHttpFormatter
 	 *                                  URI "as is"
 	 */
 	public ReportPortalOkHttp3LoggingInterceptor(@Nonnull LogLevel defaultLogLevel,
-			@Nullable Function<Header, String> headerConvertFunction,
-			@Nullable Function<Header, String> partHeaderConvertFunction,
-			@Nullable Function<Cookie, String> cookieConvertFunction,
-			@Nullable Function<String, String> uriConverterFunction) {
-		super(defaultLogLevel,
-				headerConvertFunction,
-				partHeaderConvertFunction,
-				cookieConvertFunction,
-				uriConverterFunction
-		);
+			@Nullable Function<Header, String> headerConvertFunction, @Nullable Function<Header, String> partHeaderConvertFunction,
+			@Nullable Function<Cookie, String> cookieConvertFunction, @Nullable Function<String, String> uriConverterFunction) {
+		this(defaultLogLevel, headerConvertFunction, partHeaderConvertFunction, cookieConvertFunction, uriConverterFunction,
+				DefaultFormParamConverter.INSTANCE);
 	}
 
 	/**
@@ -81,15 +98,9 @@ public class ReportPortalOkHttp3LoggingInterceptor extends AbstractHttpFormatter
 	 *                                  formats Cookies with <code>toString</code> method
 	 */
 	public ReportPortalOkHttp3LoggingInterceptor(@Nonnull LogLevel defaultLogLevel,
-			@Nullable Function<Header, String> headerConvertFunction,
-			@Nullable Function<Header, String> partHeaderConvertFunction,
+			@Nullable Function<Header, String> headerConvertFunction, @Nullable Function<Header, String> partHeaderConvertFunction,
 			@Nullable Function<Cookie, String> cookieConvertFunction) {
-		this(defaultLogLevel,
-				headerConvertFunction,
-				partHeaderConvertFunction,
-				cookieConvertFunction,
-				DefaultUriConverter.INSTANCE
-		);
+		this(defaultLogLevel, headerConvertFunction, partHeaderConvertFunction, cookieConvertFunction, DefaultUriConverter.INSTANCE);
 	}
 
 	/**
@@ -102,8 +113,7 @@ public class ReportPortalOkHttp3LoggingInterceptor extends AbstractHttpFormatter
 	 * @param partHeaderConvertFunction the same as for HTTP Headers, but for parts in Multipart request
 	 */
 	public ReportPortalOkHttp3LoggingInterceptor(@Nonnull LogLevel defaultLogLevel,
-			@Nullable Function<Header, String> headerConvertFunction,
-			@Nullable Function<Header, String> partHeaderConvertFunction) {
+			@Nullable Function<Header, String> headerConvertFunction, @Nullable Function<Header, String> partHeaderConvertFunction) {
 		this(defaultLogLevel, headerConvertFunction, partHeaderConvertFunction, DefaultCookieConverter.INSTANCE);
 	}
 
@@ -137,34 +147,26 @@ public class ReportPortalOkHttp3LoggingInterceptor extends AbstractHttpFormatter
 		if (requestFilters.stream().anyMatch(f -> f.test(request))) {
 			return chain.proceed(chain.request());
 		}
-		emitLog(HttpEntityFactory.createHttpRequestFormatter(request,
+		emitLog(HttpEntityFactory.createHttpRequestFormatter(
+				request,
 				uriConverter,
 				headerConverter,
 				cookieConverter,
-				contentPrettiers,
+				paramConverter,
+				getContentPrettifiers(),
 				partHeaderConverter,
-				bodyTypeMap
+				getBodyTypeMap()
 		));
 		Response response = chain.proceed(chain.request());
 		Response[] responses = duplicateResponse(response);
-		emitLog(HttpEntityFactory.createHttpResponseFormatter(responses[0],
+		emitLog(HttpEntityFactory.createHttpResponseFormatter(
+				responses[0],
 				headerConverter,
 				cookieConverter,
-				contentPrettiers,
-				bodyTypeMap
+				getContentPrettifiers(),
+				getBodyTypeMap()
 		));
 		return responses[1];
-	}
-
-	public ReportPortalOkHttp3LoggingInterceptor setBodyTypeMap(@Nonnull Map<String, BodyType> typeMap) {
-		this.bodyTypeMap = Collections.unmodifiableMap(new HashMap<>(typeMap));
-		return this;
-	}
-
-	public ReportPortalOkHttp3LoggingInterceptor setContentPrettiers(
-			@Nonnull Map<String, Function<String, String>> contentPrettiers) {
-		this.contentPrettiers = Collections.unmodifiableMap(new HashMap<>(contentPrettiers));
-		return this;
 	}
 
 	public ReportPortalOkHttp3LoggingInterceptor addRequestFilter(@Nonnull Predicate<Request> requestFilter) {
