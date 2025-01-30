@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [5.1.6]
 ### Added
 - A constructor in `ReportPortalOkHttp3LoggingInterceptor` class which accepts `paramConverter` parameter, by @HardNorth
 ### Changed
