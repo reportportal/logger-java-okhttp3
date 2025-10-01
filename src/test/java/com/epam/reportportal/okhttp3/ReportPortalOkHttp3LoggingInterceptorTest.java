@@ -41,9 +41,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -167,7 +168,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		runChain(
 				request,
 				response,
-				mock -> mock.when(() -> ReportPortal.emitLog(logCapture.capture(), anyString(), any(Date.class))).thenReturn(Boolean.TRUE)
+				mock -> mock.when(() -> ReportPortal.emitLog(logCapture.capture(), anyString(), any(Instant.class))).thenReturn(Boolean.TRUE)
 		);
 		return logCapture.getAllValues();
 	}
@@ -177,7 +178,7 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 		runChain(
 				request,
 				response,
-				mock -> mock.when(() -> ReportPortal.emitLog(logCapture.capture(), anyString(), any(Date.class))).thenReturn(Boolean.TRUE)
+				mock -> mock.when(() -> ReportPortal.emitLog(logCapture.capture(), anyString(), any(Instant.class))).thenReturn(Boolean.TRUE)
 		);
 		return logCapture.getAllValues();
 	}
@@ -195,9 +196,9 @@ public class ReportPortalOkHttp3LoggingInterceptorTest {
 			when(reporter.sendStep(any(ItemStatus.class), stepCaptor.capture())).thenReturn(CommonUtils.createMaybeUuid());
 			runChain(
 					request, response, mock -> {
-						mock.when(() -> ReportPortal.emitLog(stringArgumentCaptor.capture(), anyString(), any(Date.class)))
+						mock.when(() -> ReportPortal.emitLog(stringArgumentCaptor.capture(), anyString(), any(Instant.class)))
 								.thenReturn(Boolean.TRUE);
-						mock.when(() -> ReportPortal.emitLog(messageArgumentCaptor.capture(), anyString(), any(Date.class)))
+						mock.when(() -> ReportPortal.emitLog(messageArgumentCaptor.capture(), anyString(), any(Instant.class)))
 								.thenReturn(Boolean.TRUE);
 					}, interceptor
 			);
