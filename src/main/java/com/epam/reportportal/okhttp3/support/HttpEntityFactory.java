@@ -28,8 +28,8 @@ import com.epam.reportportal.utils.http.ContentType;
 import okhttp3.*;
 import okio.Buffer;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;

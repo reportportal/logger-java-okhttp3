@@ -28,8 +28,8 @@ import com.epam.reportportal.listeners.LogLevel;
 import com.epam.reportportal.okhttp3.support.HttpEntityFactory;
 import okhttp3.*;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
