@@ -37,13 +37,12 @@ repositories {
 }
 
 dependencies {
-    api 'com.epam.reportportal:utils-java-formatting:5.3.0'
+    api 'com.epam.reportportal:utils-java-formatting:5.4.0'
     compileOnly "com.epam.reportportal:client-java:${client_version}"
     compileOnly "com.google.code.findbugs:jsr305:${jsr305_version}"
     compileOnly "com.squareup.okhttp3:okhttp:${okhttp_version}"
 
     testImplementation "com.epam.reportportal:client-java:${client_version}"
-    testImplementation "com.google.code.findbugs:jsr305:${jsr305_version}"
     testImplementation "com.squareup.okhttp3:okhttp:${okhttp_version}"
     testImplementation 'com.epam.reportportal:agent-java-test-utils:0.0.12'
 
