@@ -38,7 +38,7 @@ repositories {
 
 dependencies {
     api 'com.epam.reportportal:utils-java-formatting:5.4.0'
-    implementation 'org.apache.commons:commons-lang3:3.18.0'
+    implementation 'org.apache.commons:commons-lang3:3.19.0'
     compileOnly "com.epam.reportportal:client-java:${client_version}"
     compileOnly "com.squareup.okhttp3:okhttp:${okhttp_version}"
 
